@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scroll Canvas Fullscreen COVER</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+<style>
+  body {
+    margin: 0;
+    height: 500vh;
+    background: black;
+    overflow-x: hidden;
+  }
+
+  canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  /* 🔥 HEADER */
+  #main-header {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    pointer-events: auto;
+    opacity: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #main-header img {
+    height: 60px;
+  }
+
+  header ul{
+    width: max-content;
+    display: flex;
+    color: white;
+    list-style: none;
+    gap: 20px;
+    font-family: sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="hero-canvas"></canvas>
+
+<header id="main-header">
+  <img src="Captura de pantalla 2026-03-17 105340.png" alt="">
+  <ul>
+    <li>Inicio</li>
+    <li>Que es Littland?</li>
+    <a style="color: white; text-decoration: none;" href="servidor.html">
+      <li>Servidor</li>
+    </a>
+  </ul>
+</header>
+
+<script>
+// CONFIG
+const frameCount = 71;
+const currentFrame = i => `./imagenes/${(i + 3).toString().padStart(4, '0')}.png`;
+
+const canvas = document.getElementById("hero-canvas");
+const ctx = canvas.getContext("2d");
+const header = document.getElementById("main-header");
+
+const images = [];
+const loaded = [];
+let lastValidFrame = 0;
+
+// Resize
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+
+  canvas.style.width = window.innerWidth + "px";
+  canvas.style.height = window.innerHeight + "px";
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  draw(lastValidFrame);
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+// Preload
+for (let i = 0; i < frameCount; i++) {
+  const img = new Image();
+  img.src = currentFrame(i);
+  images.push(img);
+  loaded[i] = false;
+
+  img.onload = () => {
+    loaded[i] = true;
+    if (i === 0) draw(0);
+  };
+}
+
+// GSAP
+const state = { frame: 0 };
+gsap.registerPlugin(ScrollTrigger);
+
+// Animación frames
+gsap.to(state, {
+  frame: frameCount - 1,
+  ease: "none",
+  scrollTrigger: {
+    trigger: canvas,
+    start: "top top",
+    end: "+=1000",
+    scrub: 0.5,
+    pin: true,
+  },
+  onUpdate: () => draw(Math.round(state.frame))
+});
+
+// 🔥 HEADER APARECE EN SCROLL
+ScrollTrigger.create({
+  trigger: canvas,
+  start: "top top",
+  end: "+=2000",
+  onUpdate: self => {
+
+    if (self.progress > 0.3) {
+      gsap.to(header, { opacity: 1, duration: 0.3, pointerEvents: "auto" });
+    } else {
+      gsap.to(header, { opacity: 0, duration: 0.3, pointerEvents: "none" });
+    }
+
+  }
+});
+
+// DRAW
+function draw(frame) {
+  if (!loaded[frame]) frame = lastValidFrame;
+  else lastValidFrame = frame;
+
+  const img = images[frame];
+  if (!img) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const canvasRatio = window.innerWidth / window.innerHeight;
+  const imgRatio = img.width / img.height;
+
+  let drawWidth, drawHeight;
+
+  if (canvasRatio > imgRatio) {
+    drawWidth = window.innerWidth;
+    drawHeight = window.innerWidth / imgRatio;
+  } else {
+    drawHeight = window.innerHeight;
+    drawWidth = window.innerHeight * imgRatio;
+  }
+
+  const x = (window.innerWidth - drawWidth) / 2;
+  const y = (window.innerHeight - drawHeight) / 2;
+
+  ctx.drawImage(img, x, y, drawWidth, drawHeight);
+}
+</script>
+
+</body>
+</html>
